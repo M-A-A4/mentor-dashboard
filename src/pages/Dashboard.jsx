@@ -1,24 +1,51 @@
 
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+function getProfileName() {
+  try {
+    const saved = localStorage.getItem("mentor-profile");
+    const profile = saved ? JSON.parse(saved) : null;
+    return profile?.name?.trim() || "User";
+  } catch {
+    return "User";
+  }
+}
+
 function Dashboard() {
+  const [userName, setUserName] = useState(getProfileName);
+
+  useEffect(() => {
+    function updateName() {
+      setUserName(getProfileName());
+    }
+
+    window.addEventListener("mentor-profile-updated", updateName);
+    window.addEventListener("storage", updateName);
+
+    return () => {
+      window.removeEventListener("mentor-profile-updated", updateName);
+      window.removeEventListener("storage", updateName);
+    };
+  }, []);
+
   const stats = [
     {
       title: "Total Projects",
       value: "12",
-      note: "Your workspace projects",
+      note: "Example workspace total",
       icon: "▦",
     },
     {
       title: "Tasks Completed",
       value: "24",
-      note: "Sample completion count",
+      note: "Example completion count",
       icon: "✓",
     },
     {
       title: "Hours Tracked",
       value: "36",
-      note: "Sample tracked hours",
+      note: "Example tracked hours",
       icon: "◷",
     },
     {
@@ -34,9 +61,9 @@ function Dashboard() {
       <section className="welcome-banner">
         <div>
           <span className="banner-label">YOUR WORKSPACE</span>
-          <h1>Welcome back, User!</h1>
+          <h1>Welcome back, {userName}!</h1>
           <p>
-            Here's an overview of your workspace. Choose a
+            Here's an overview of your demo workspace. Choose a
             section from the sidebar to get started.
           </p>
           <Link to="/dashboard/profile" className="banner-button">
@@ -66,35 +93,35 @@ function Dashboard() {
           <div className="panel-heading">
             <div>
               <h2>Recent Activity</h2>
-              <p>A quick look at your workspace</p>
+              <p>Available sections in your workspace</p>
             </div>
           </div>
 
           <div className="activity-item">
             <span className="activity-dot purple-dot" />
             <div>
-              <strong>Dashboard created</strong>
+              <strong>Dashboard available</strong>
               <p>Your workspace overview is ready.</p>
             </div>
-            <span className="activity-time">Today</span>
+            <span className="activity-time">Ready</span>
           </div>
 
           <div className="activity-item">
             <span className="activity-dot blue-dot" />
             <div>
-              <strong>Profile section available</strong>
-              <p>Explore your profile page.</p>
+              <strong>Profile management</strong>
+              <p>View and edit your saved profile information.</p>
             </div>
-            <span className="activity-time">Today</span>
+            <span className="activity-time">Ready</span>
           </div>
 
           <div className="activity-item">
             <span className="activity-dot green-dot" />
             <div>
-              <strong>Settings section available</strong>
-              <p>Explore your workspace settings.</p>
+              <strong>Workspace preferences</strong>
+              <p>Manage your theme and notification preference.</p>
             </div>
-            <span className="activity-time">Today</span>
+            <span className="activity-time">Ready</span>
           </div>
         </article>
 
@@ -106,7 +133,7 @@ function Dashboard() {
             <span className="quick-link-icon">♙</span>
             <span>
               <strong>My Profile</strong>
-              <small>View your information</small>
+              <small>View and edit your information</small>
             </span>
             <span className="quick-arrow">→</span>
           </Link>
@@ -115,12 +142,17 @@ function Dashboard() {
             <span className="quick-link-icon">⚙</span>
             <span>
               <strong>Settings</strong>
-              <small>Explore preferences</small>
+              <small>Manage workspace preferences</small>
             </span>
             <span className="quick-arrow">→</span>
           </Link>
         </article>
       </section>
+
+      <p className="demo-note">
+        Dashboard statistics are sample values for demonstration.
+        They are not connected to a live project or task database.
+      </p>
     </div>
   );
 }
