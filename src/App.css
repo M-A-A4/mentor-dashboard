@@ -1695,3 +1695,38 @@ html[data-theme="dark"] .not-found-page {
   background: #0f172a;
   color: #e2e8f0;
 }
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logout-button {
+  padding: 9px 14px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.logout-button:hover {
+  background: rgba(127, 127, 127, 0.12);
+}
+
+@media (max-width: 520px) {
+  .navbar-right {
+    gap: 8px;
+  }
+
+  .navbar-user-info {
+    display: none;
+  }
+
+  .logout-button {
+    padding: 8px 10px;
+  }
+}

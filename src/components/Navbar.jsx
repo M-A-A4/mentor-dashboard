@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const defaultProfile = {
   name: "Demo User",
@@ -20,6 +20,7 @@ function getSavedProfile() {
 
 function Navbar({ onMenuClick }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(getSavedProfile);
 
   useEffect(() => {
@@ -27,10 +28,7 @@ function Navbar({ onMenuClick }) {
       setProfile(getSavedProfile());
     }
 
-    // Update when the profile is saved in this browser tab.
     window.addEventListener("mentor-profile-updated", updateProfile);
-
-    // Update when localStorage changes in another browser tab.
     window.addEventListener("storage", updateProfile);
 
     return () => {
@@ -38,6 +36,11 @@ function Navbar({ onMenuClick }) {
       window.removeEventListener("storage", updateProfile);
     };
   }, []);
+
+  function handleLogout() {
+    localStorage.removeItem("mentor-demo-session");
+    navigate("/signin", { replace: true });
+  }
 
   const pageTitles = {
     "/dashboard": "Dashboard",
@@ -62,19 +65,27 @@ function Navbar({ onMenuClick }) {
 
         <div>
           <h2>{pageTitle}</h2>
-          <p className="navbar-subtitle">
-            Welcome to your workspace
-          </p>
+          <p className="navbar-subtitle">Welcome to your workspace</p>
         </div>
       </div>
 
-      <Link to="/dashboard/profile" className="navbar-user">
-        <div className="avatar">{initial}</div>
-        <div className="navbar-user-info">
-          <strong>{profile.name || "Demo User"}</strong>
-          <span>{profile.role || "Workspace Member"}</span>
-        </div>
-      </Link>
+      <div className="navbar-right">
+        <Link to="/dashboard/profile" className="navbar-user">
+          <div className="avatar">{initial}</div>
+          <div className="navbar-user-info">
+            <strong>{profile.name || "Demo User"}</strong>
+            <span>{profile.role || "Workspace Member"}</span>
+          </div>
+        </Link>
+
+        <button
+          type="button"
+          className="logout-button"
+          onClick={handleLogout}
+        >
+          Log out
+        </button>
+      </div>
     </header>
   );
 }
