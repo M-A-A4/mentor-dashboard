@@ -1,4 +1,5 @@
 
+import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Landing from "./pages/Landing";
 import SignIn from "./pages/SignIn";
@@ -10,6 +11,16 @@ import DashboardLayout from "./components/DashboardLayout";
 import "./App.css";
 
 function App() {
+  useEffect(() => {
+    const savedTheme =
+      localStorage.getItem("mentor-dark-mode") === "true";
+
+    document.documentElement.setAttribute(
+      "data-theme",
+      savedTheme ? "dark" : "light"
+    );
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<Landing />} />

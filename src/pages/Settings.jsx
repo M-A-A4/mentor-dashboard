@@ -1,9 +1,30 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function Settings() {
-  const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [notifications, setNotifications] = useState(() => {
+    return localStorage.getItem("mentor-notifications") !== "false";
+  });
+
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("mentor-dark-mode") === "true";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      "data-theme",
+      darkMode ? "dark" : "light"
+    );
+
+    localStorage.setItem("mentor-dark-mode", String(darkMode));
+  }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "mentor-notifications",
+      String(notifications)
+    );
+  }, [notifications]);
 
   return (
     <div className="page-container">
@@ -27,7 +48,10 @@ function Settings() {
         <div className="setting-row">
           <div>
             <strong>Email Notifications</strong>
-            <p>Receive updates about workspace activity.</p>
+            <p>
+              Save your notification preference for this browser.
+              This does not send emails yet.
+            </p>
           </div>
 
           <label className="toggle">
@@ -37,6 +61,7 @@ function Settings() {
               onChange={(event) =>
                 setNotifications(event.target.checked)
               }
+              aria-label="Enable email notifications preference"
             />
             <span className="toggle-slider" />
           </label>
@@ -44,8 +69,8 @@ function Settings() {
 
         <div className="setting-row">
           <div>
-            <strong>Dark Mode Preference</strong>
-            <p>Toggle this example preference on or off.</p>
+            <strong>Dark Mode</strong>
+            <p>Switch between light and dark appearance.</p>
           </div>
 
           <label className="toggle">
@@ -55,6 +80,7 @@ function Settings() {
               onChange={(event) =>
                 setDarkMode(event.target.checked)
               }
+              aria-label="Enable dark mode"
             />
             <span className="toggle-slider" />
           </label>
@@ -65,12 +91,10 @@ function Settings() {
           <p>
             Notifications: {notifications ? "Enabled" : "Disabled"}
           </p>
-          <p>
-            Dark mode preference: {darkMode ? "On" : "Off"}
-          </p>
+          <p>Dark mode: {darkMode ? "On" : "Off"}</p>
           <small>
-            These are temporary demo settings and reset when
-            the page is refreshed.
+            Preferences are saved in this browser and remain after
+            refreshing the page.
           </small>
         </div>
       </section>
