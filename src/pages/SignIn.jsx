@@ -1,11 +1,33 @@
 
 import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 function SignIn() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   function handleContinue(event) {
     event.preventDefault();
+    setError("");
+
+    if (!email.trim() || !password.trim()) {
+      setError("Please enter both your email and password.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    // Demo only: this does not verify credentials with a server.
+    localStorage.setItem(
+      "mentor-demo-session",
+      JSON.stringify({ email: email.trim() })
+    );
+
     navigate("/dashboard");
   }
 
@@ -29,8 +51,7 @@ function SignIn() {
           <h1>Sign in to your workspace</h1>
 
           <p className="signin-description">
-            This is a demo sign-in page. Authentication is
-            disabled for this project.
+            Enter your email and password to continue in demo mode.
           </p>
 
           <form onSubmit={handleContinue}>
@@ -40,6 +61,9 @@ function SignIn() {
               type="email"
               placeholder="you@example.com"
               autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
             />
 
             <label htmlFor="password">Password</label>
@@ -48,20 +72,32 @@ function SignIn() {
               type="password"
               placeholder="Enter any password"
               autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
             />
 
-            <button type="submit" className="primary-button signin-submit">
+            {error && (
+              <p role="alert" className="signin-error">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className="primary-button signin-submit"
+            >
               Continue to Dashboard →
             </button>
           </form>
 
           <p className="demo-note">
-            Demo mode: no real account or password is required.
+            Demo mode: credentials are not verified by a server.
+            Do not use a real password.
           </p>
 
           <p className="signin-bottom">
-            New here?{" "}
-            <Link to="/">Explore the landing page</Link>
+            New here? <Link to="/">Explore the landing page</Link>
           </p>
         </div>
       </div>

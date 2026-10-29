@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
 function getProfileName() {
   try {
@@ -12,24 +13,10 @@ function getProfileName() {
   }
 }
 
-function Dashboard() {
-  const [userName, setUserName] = useState(getProfileName);
-
-  useEffect(() => {
-    function updateName() {
-      setUserName(getProfileName());
-    }
-
-    window.addEventListener("mentor-profile-updated", updateName);
-    window.addEventListener("storage", updateName);
-
-    return () => {
-      window.removeEventListener("mentor-profile-updated", updateName);
-      window.removeEventListener("storage", updateName);
-    };
-  }, []);
-
-  const stats = [
+// Demo data function for practicing React Query.
+// This data is local and is not fetched from a backend.
+async function getDashboardStats() {
+  return [
     {
       title: "Total Projects",
       value: "12",
@@ -55,6 +42,35 @@ function Dashboard() {
       icon: "↗",
     },
   ];
+}
+
+function Dashboard() {
+  const [userName, setUserName] = useState(getProfileName);
+
+  const {
+    data: stats = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: getDashboardStats,
+  });
+
+  useEffect(() => {
+    function updateName() {
+      setUserName(getProfileName());
+    }
+
+    window.addEventListener("mentor-profile-updated", updateName);
+    window.addEventListener("storage", updateName);
+
+    return () => {
+      window.removeEventListener("mentor-profile-updated", updateName);
+      window.removeEventListener("storage", updateName);
+    };
+  }, []);
 
   return (
     <div className="page-container">
@@ -75,17 +91,28 @@ function Dashboard() {
       </section>
 
       <section className="stats-grid">
-        {stats.map((stat) => (
-          <article className="stat-card" key={stat.title}>
-            <div className="stat-card-top">
-              <span>{stat.title}</span>
-              <span className="stat-icon">{stat.icon}</span>
-            </div>
+        {isLoading ? (
+          <p>Loading dashboard statistics...</p>
+        ) : isError ? (
+          <div>
+            <p>Could not load statistics: {error.message}</p>
+            <button type="button" onClick={() => refetch()}>
+              Try again
+            </button>
+          </div>
+        ) : (
+          stats.map((stat) => (
+            <article className="stat-card" key={stat.title}>
+              <div className="stat-card-top">
+                <span>{stat.title}</span>
+                <span className="stat-icon">{stat.icon}</span>
+              </div>
 
-            <strong className="stat-value">{stat.value}</strong>
-            <p>{stat.note}</p>
-          </article>
-        ))}
+              <strong className="stat-value">{stat.value}</strong>
+              <p>{stat.note}</p>
+            </article>
+          ))
+        )}
       </section>
 
       <section className="content-grid">
