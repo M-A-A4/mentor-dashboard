@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getCurrentUserId } from "../utils/user";
+import { getCurrentUserId, getCurrentUsername } from "../utils/user";
 
 const API_URL = "http://localhost:3001/projects";
 
@@ -108,19 +108,22 @@ function Projects() {
       return;
     }
 
-    const now = new Date().toISOString();
-    const project = {
-      ...(editingProject || {}),
-      title,
-      owner: editingProject?.owner || getCurrentUserId(),
-      members: form.members
-        .split(",")
-        .map((member) => member.trim())
-        .filter(Boolean),
-      createdAt: editingProject?.createdAt || now,
-      updatedAt: now,
-      completedAt: form.completedAt || null,
-    };
+    
+const now = new Date().toISOString();
+const project = {
+  ...(editingProject || {}),
+  title,
+  owner: editingProject?.owner || getCurrentUserId(),
+  ownerUsername: editingProject?.ownerUsername || getCurrentUsername(),
+  members: form.members
+    .split(",")
+    .map((member) => member.trim())
+    .filter(Boolean),
+  createdAt: editingProject?.createdAt || now,
+  updatedAt: now,
+  completedAt: form.completedAt || null,
+};
+
 
     saveMutation.mutate(project);
   }

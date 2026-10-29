@@ -5,7 +5,10 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { getCurrentUserId } from "../utils/user";
+import {
+  getCurrentUserId,
+  getCurrentUsername,
+} from "../utils/user";
 
 const TASKS_URL = "http://localhost:3001/tasks";
 const PROJECTS_URL = "http://localhost:3001/projects";
@@ -21,13 +24,21 @@ const emptyForm = {
 
 async function fetchTasks() {
   const response = await fetch(TASKS_URL);
-  if (!response.ok) throw new Error("Failed to load tasks");
+
+  if (!response.ok) {
+    throw new Error("Failed to load tasks");
+  }
+
   return response.json();
 }
 
 async function fetchProjects() {
   const response = await fetch(PROJECTS_URL);
-  if (!response.ok) throw new Error("Failed to load projects");
+
+  if (!response.ok) {
+    throw new Error("Failed to load projects");
+  }
+
   return response.json();
 }
 
@@ -38,12 +49,17 @@ async function saveTask(task) {
     isEditing ? `${TASKS_URL}/${task.id}` : TASKS_URL,
     {
       method: isEditing ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(task),
     }
   );
 
-  if (!response.ok) throw new Error("Failed to save task");
+  if (!response.ok) {
+    throw new Error("Failed to save task");
+  }
+
   return response.json();
 }
 
@@ -52,7 +68,9 @@ async function deleteTask(id) {
     method: "DELETE",
   });
 
-  if (!response.ok) throw new Error("Failed to delete task");
+  if (!response.ok) {
+    throw new Error("Failed to delete task");
+  }
 }
 
 function Tasks() {
@@ -106,14 +124,18 @@ function Tasks() {
 
   function openEditModal(task) {
     setEditingTask(task);
+
     setForm({
       title: task.title || "",
       priority: task.priority || "Medium",
       status: task.status || "To Do",
       assignee: task.assignee || "",
-      projectId: task.projectId == null ? "" : String(task.projectId),
-      parentId: task.parentId == null ? "" : String(task.parentId),
+      projectId:
+        task.projectId == null ? "" : String(task.projectId),
+      parentId:
+        task.parentId == null ? "" : String(task.parentId),
     });
+
     setFormError("");
     saveMutation.reset();
     setIsModalOpen(true);
@@ -152,9 +174,17 @@ function Tasks() {
       assignee: form.assignee.trim(),
       projectId: form.projectId,
       parentId: form.parentId.trim() || null,
-      createdBy: editingTask?.createdBy || getCurrentUserId(),
+
+      // Preserve the original creator when editing.
+      createdBy:
+        editingTask?.createdBy || getCurrentUserId(),
+
+      createdByUsername:
+        editingTask?.createdByUsername || getCurrentUsername(),
+
       createdAt: editingTask?.createdAt || now,
       updatedAt: now,
+
       completedAt: isCompleted
         ? editingTask?.completedAt || now
         : null,
@@ -190,7 +220,9 @@ function Tasks() {
 
       {isLoading && <p>Loading tasks...</p>}
 
-      {isError && <p role="alert">{error.message}</p>}
+      {isError && (
+        <p role="alert">{error.message}</p>
+      )}
 
       {saveMutation.isError && (
         <p role="alert">{saveMutation.error.message}</p>
@@ -235,10 +267,17 @@ function Tasks() {
                     <td>{task.assignee || "—"}</td>
                     <td>{getProjectTitle(task.projectId)}</td>
                     <td>{task.parentId ?? "—"}</td>
-                    <td>{task.createdBy}</td>
+
+                    <td>
+                      {task.createdByUsername ||
+                        task.createdBy ||
+                        "—"}
+                    </td>
+
                     <td>{formatDate(task.createdAt)}</td>
                     <td>{formatDate(task.updatedAt)}</td>
                     <td>{formatDate(task.completedAt)}</td>
+
                     <td>
                       <button
                         type="button"
@@ -246,6 +285,7 @@ function Tasks() {
                       >
                         Edit
                       </button>{" "}
+
                       <button
                         type="button"
                         disabled={deleteMutation.isPending}
@@ -292,7 +332,10 @@ function Tasks() {
                 <input
                   value={form.title}
                   onChange={(event) =>
-                    setForm({ ...form, title: event.target.value })
+                    setForm({
+                      ...form,
+                      title: event.target.value,
+                    })
                   }
                   required
                   autoFocus
@@ -304,7 +347,10 @@ function Tasks() {
                 <select
                   value={form.priority}
                   onChange={(event) =>
-                    setForm({ ...form, priority: event.target.value })
+                    setForm({
+                      ...form,
+                      priority: event.target.value,
+                    })
                   }
                 >
                   <option value="Low">Low</option>
@@ -318,7 +364,10 @@ function Tasks() {
                 <select
                   value={form.status}
                   onChange={(event) =>
-                    setForm({ ...form, status: event.target.value })
+                    setForm({
+                      ...form,
+                      status: event.target.value,
+                    })
                   }
                 >
                   <option value="To Do">To Do</option>
@@ -332,7 +381,10 @@ function Tasks() {
                 <input
                   value={form.assignee}
                   onChange={(event) =>
-                    setForm({ ...form, assignee: event.target.value })
+                    setForm({
+                      ...form,
+                      assignee: event.target.value,
+                    })
                   }
                   placeholder="Name or user ID"
                 />
@@ -343,14 +395,23 @@ function Tasks() {
                 <select
                   value={form.projectId}
                   onChange={(event) =>
-                    setForm({ ...form, projectId: event.target.value })
+                    setForm({
+                      ...form,
+                      projectId: event.target.value,
+                    })
                   }
                   required
-                  disabled={projectsLoading || projects.length === 0}
+                  disabled={
+                    projectsLoading || projects.length === 0
+                  }
                 >
                   <option value="">Select a project</option>
+
                   {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
+                    <option
+                      key={project.id}
+                      value={project.id}
+                    >
                       {project.title}
                     </option>
                   ))}
@@ -362,7 +423,10 @@ function Tasks() {
                 <input
                   value={form.parentId}
                   onChange={(event) =>
-                    setForm({ ...form, parentId: event.target.value })
+                    setForm({
+                      ...form,
+                      parentId: event.target.value,
+                    })
                   }
                   placeholder="For example, 1"
                 />
@@ -374,14 +438,21 @@ function Tasks() {
                 </p>
               )}
 
-              {formError && <p role="alert">{formError}</p>}
+              {formError && (
+                <p role="alert">{formError}</p>
+              )}
 
               {saveMutation.isError && (
-                <p role="alert">{saveMutation.error.message}</p>
+                <p role="alert">
+                  {saveMutation.error.message}
+                </p>
               )}
 
               <div className="project-modal-actions">
-                <button type="button" onClick={closeModal}>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                >
                   Cancel
                 </button>
 
