@@ -30,6 +30,25 @@ function Sidebar({ isOpen, onNavigate }) {
           <span>Dashboard</span>
         </NavLink>
 
+        {/* Projects link */}
+        <NavLink
+          to="/dashboard/projects"
+          className={linkClass}
+          onClick={onNavigate}
+        >
+          <span className="sidebar-icon">▣</span>
+          <span>Projects</span>
+        </NavLink>
+
+        <NavLink
+          to="/dashboard/tasks"
+          className={linkClass}
+          onClick={onNavigate}
+        >
+          <span className="sidebar-icon">✓</span>
+          <span>Tasks</span>
+        </NavLink>
+
         <NavLink
           to="/dashboard/profile"
           className={linkClass}

@@ -1,0 +1,17 @@
+{
+  "projects": [
+    {
+      "title": "managment",
+      "owner": "bda02295-509d-41ff-856a-64acda5c1f38",
+      "members": [
+        "67",
+        "78"
+      ],
+      "createdAt": "2026-10-29T10:43:04.873Z",
+      "updatedAt": "2026-10-29T10:43:04.873Z",
+      "completedAt": "2026-10-28",
+      "id": 1
+    }
+  ],
+  "tasks": []
+}
