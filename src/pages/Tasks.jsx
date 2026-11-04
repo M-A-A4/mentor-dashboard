@@ -1,17 +1,12 @@
 
 import { useState } from "react";
 import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import {
   getCurrentUserId,
   getCurrentUsername,
 } from "../utils/user";
-
-const TASKS_URL = "http://localhost:3001/tasks";
-const PROJECTS_URL = "http://localhost:3001/projects";
+import { useTasks } from "../hooks/useTasks";
+import { taskSchema } from "../schemas/taskSchema";
+import TaskForm from "../components/TaskForm";
 
 const emptyForm = {
   title: "",
@@ -20,99 +15,33 @@ const emptyForm = {
   assignee: "",
   projectId: "",
   parentId: "",
+  dueDate: "",
 };
 
-async function fetchTasks() {
-  const response = await fetch(TASKS_URL);
-
-  if (!response.ok) {
-    throw new Error("Failed to load tasks");
-  }
-
-  return response.json();
-}
-
-async function fetchProjects() {
-  const response = await fetch(PROJECTS_URL);
-
-  if (!response.ok) {
-    throw new Error("Failed to load projects");
-  }
-
-  return response.json();
-}
-
-async function saveTask(task) {
-  const isEditing = Boolean(task.id);
-
-  const response = await fetch(
-    isEditing ? `${TASKS_URL}/${task.id}` : TASKS_URL,
-    {
-      method: isEditing ? "PUT" : "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(task),
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to save task");
-  }
-
-  return response.json();
-}
-
-async function deleteTask(id) {
-  const response = await fetch(`${TASKS_URL}/${id}`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to delete task");
-  }
-}
-
 function Tasks() {
-  const queryClient = useQueryClient();
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
 
   const {
+    tasksQuery,
+    projectsQuery,
+    saveMutation,
+    deleteMutation,
+  } = useTasks();
+
+  const {
     data: tasks = [],
     isLoading,
     isError,
     error,
-  } = useQuery({
-    queryKey: ["tasks"],
-    queryFn: fetchTasks,
-  });
+  } = tasksQuery;
 
   const {
     data: projects = [],
     isLoading: projectsLoading,
-  } = useQuery({
-    queryKey: ["projects"],
-    queryFn: fetchProjects,
-  });
-
-  const saveMutation = useMutation({
-    mutationFn: saveTask,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      closeModal();
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteTask,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-    },
-  });
+  } = projectsQuery;
 
   function openCreateModal() {
     setEditingTask(null);
@@ -130,10 +59,9 @@ function Tasks() {
       priority: task.priority || "Medium",
       status: task.status || "To Do",
       assignee: task.assignee || "",
-      projectId:
-        task.projectId == null ? "" : String(task.projectId),
-      parentId:
-        task.parentId == null ? "" : String(task.parentId),
+      projectId: task.projectId == null ? "" : String(task.projectId),
+      parentId: task.parentId == null ? "" : String(task.parentId),
+      dueDate: task.dueDate || "",
     });
 
     setFormError("");
@@ -150,47 +78,51 @@ function Tasks() {
 
   function handleSubmit(event) {
     event.preventDefault();
+    setFormError("");
 
-    const title = form.title.trim();
+    const validation = taskSchema.safeParse(form);
 
-    if (!title) {
-      setFormError("Task title is required.");
+    if (!validation.success) {
+      setFormError(validation.error.issues[0].message);
       return;
     }
 
-    if (!form.projectId) {
-      setFormError("Please select a project.");
+    const selectedProject = projects.find(
+      (project) => String(project.id) === validation.data.projectId
+    );
+
+    if (!selectedProject) {
+      setFormError("Please select a valid project.");
       return;
     }
 
     const now = new Date().toISOString();
-    const isCompleted = form.status === "Completed";
+    const isCompleted = validation.data.status === "Completed";
 
     const task = {
       ...(editingTask || {}),
-      title,
-      priority: form.priority,
-      status: form.status,
-      assignee: form.assignee.trim(),
-      projectId: form.projectId,
-      parentId: form.parentId.trim() || null,
+      title: validation.data.title,
+      priority: validation.data.priority,
+      status: validation.data.status,
+      assignee: validation.data.assignee.trim(),
+      projectId: validation.data.projectId,
+      parentId: validation.data.parentId.trim() || null,
+      dueDate: validation.data.dueDate || null,
 
-      // Preserve the original creator when editing.
-      createdBy:
-        editingTask?.createdBy || getCurrentUserId(),
-
+      createdBy: editingTask?.createdBy || getCurrentUserId(),
       createdByUsername:
         editingTask?.createdByUsername || getCurrentUsername(),
 
       createdAt: editingTask?.createdAt || now,
       updatedAt: now,
-
       completedAt: isCompleted
         ? editingTask?.completedAt || now
         : null,
     };
 
-    saveMutation.mutate(task);
+    saveMutation.mutate(task, {
+      onSuccess: closeModal,
+    });
   }
 
   function getProjectTitle(projectId) {
@@ -221,7 +153,7 @@ function Tasks() {
       {isLoading && <p>Loading tasks...</p>}
 
       {isError && (
-        <p role="alert">{error.message}</p>
+        <p role="alert">{error?.message}</p>
       )}
 
       {saveMutation.isError && (
@@ -244,6 +176,7 @@ function Tasks() {
                 <th>Project</th>
                 <th>Parent ID</th>
                 <th>Created By</th>
+                <th>Due Date</th>
                 <th>Created</th>
                 <th>Updated</th>
                 <th>Completed</th>
@@ -254,7 +187,7 @@ function Tasks() {
             <tbody>
               {tasks.length === 0 ? (
                 <tr>
-                  <td colSpan="11">
+                  <td colSpan="12">
                     No tasks yet. Create your first task.
                   </td>
                 </tr>
@@ -267,13 +200,10 @@ function Tasks() {
                     <td>{task.assignee || "—"}</td>
                     <td>{getProjectTitle(task.projectId)}</td>
                     <td>{task.parentId ?? "—"}</td>
-
                     <td>
-                      {task.createdByUsername ||
-                        task.createdBy ||
-                        "—"}
+                      {task.createdByUsername || task.createdBy || "—"}
                     </td>
-
+                    <td>{formatDate(task.dueDate)}</td>
                     <td>{formatDate(task.createdAt)}</td>
                     <td>{formatDate(task.updatedAt)}</td>
                     <td>{formatDate(task.completedAt)}</td>
@@ -290,11 +220,7 @@ function Tasks() {
                         type="button"
                         disabled={deleteMutation.isPending}
                         onClick={() => {
-                          if (
-                            window.confirm(
-                              `Delete "${task.title}"?`
-                            )
-                          ) {
+                          if (window.confirm(`Delete "${task.title}"?`)) {
                             deleteMutation.mutate(task.id);
                           }
                         }}
@@ -310,171 +236,20 @@ function Tasks() {
         </div>
       )}
 
-      {isModalOpen && (
-        <div
-          className="project-modal-backdrop"
-          onClick={closeModal}
-        >
-          <section
-            className="project-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="task-modal-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2 id="task-modal-title">
-              {editingTask ? "Edit Task" : "Create Task"}
-            </h2>
-
-            <form onSubmit={handleSubmit}>
-              <label>
-                Task title
-                <input
-                  value={form.title}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      title: event.target.value,
-                    })
-                  }
-                  required
-                  autoFocus
-                />
-              </label>
-
-              <label>
-                Priority
-                <select
-                  value={form.priority}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      priority: event.target.value,
-                    })
-                  }
-                >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </select>
-              </label>
-
-              <label>
-                Status
-                <select
-                  value={form.status}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      status: event.target.value,
-                    })
-                  }
-                >
-                  <option value="To Do">To Do</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
-                </select>
-              </label>
-
-              <label>
-                Assignee
-                <input
-                  value={form.assignee}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      assignee: event.target.value,
-                    })
-                  }
-                  placeholder="Name or user ID"
-                />
-              </label>
-
-              <label>
-                Project
-                <select
-                  value={form.projectId}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      projectId: event.target.value,
-                    })
-                  }
-                  required
-                  disabled={
-                    projectsLoading || projects.length === 0
-                  }
-                >
-                  <option value="">Select a project</option>
-
-                  {projects.map((project) => (
-                    <option
-                      key={project.id}
-                      value={project.id}
-                    >
-                      {project.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Parent task ID (optional)
-                <input
-                  value={form.parentId}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      parentId: event.target.value,
-                    })
-                  }
-                  placeholder="For example, 1"
-                />
-              </label>
-
-              {projects.length === 0 && !projectsLoading && (
-                <p role="alert">
-                  Create a project first before adding a task.
-                </p>
-              )}
-
-              {formError && (
-                <p role="alert">{formError}</p>
-              )}
-
-              {saveMutation.isError && (
-                <p role="alert">
-                  {saveMutation.error.message}
-                </p>
-              )}
-
-              <div className="project-modal-actions">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={
-                    saveMutation.isPending ||
-                    projects.length === 0 ||
-                    projectsLoading
-                  }
-                >
-                  {saveMutation.isPending
-                    ? "Saving..."
-                    : editingTask
-                      ? "Save Changes"
-                      : "Create Task"}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
+     {isModalOpen && (
+        <TaskForm
+          form={form}
+          setForm={setForm}
+          formError={formError}
+          isSaving={saveMutation.isPending}
+          editingTask={editingTask}
+          projects={projects}
+          projectsLoading={projectsLoading}
+          onSubmit={handleSubmit}
+          onClose={closeModal}
+        />
       )}
+     
     </div>
   );
 }

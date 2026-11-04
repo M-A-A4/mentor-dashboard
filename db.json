@@ -11,7 +11,65 @@
       "updatedAt": "2026-10-29T10:43:04.873Z",
       "completedAt": "2026-10-28",
       "id": 1
+    },
+    {
+      "title": "HBC Project",
+      "owner": "bbe7103e-6cd2-4b09-971e-b2f236f16297",
+      "ownerUsername": "user_0356368a",
+      "members": [
+        "Ahmad",
+        "Ali"
+      ],
+      "createdAt": "2026-11-04T06:27:55.119Z",
+      "updatedAt": "2026-11-04T06:27:55.119Z",
+      "completedAt": "2026-11-25",
+      "id": 2
     }
   ],
-  "tasks": []
+  "tasks": [
+    {
+      "title": "java",
+      "priority": "High",
+      "status": "In Progress",
+      "assignee": "ali",
+      "projectId": "1",
+      "parentId": null,
+      "createdBy": "bda02295-509d-41ff-856a-64acda5c1f38",
+      "createdByUsername": "user_7a81efaf",
+      "createdAt": "2026-10-29T11:17:32.502Z",
+      "updatedAt": "2026-10-29T11:17:32.502Z",
+      "completedAt": null,
+      "id": 1
+    },
+    {
+      "title": "css",
+      "priority": "Medium",
+      "status": "Completed",
+      "assignee": "parwana",
+      "projectId": "2",
+      "parentId": null,
+      "dueDate": "2026-11-24",
+      "createdBy": "bbe7103e-6cd2-4b09-971e-b2f236f16297",
+      "createdByUsername": "user_0356368a",
+      "createdAt": "2026-11-04T07:14:14.277Z",
+      "updatedAt": "2026-11-04T07:14:14.277Z",
+      "completedAt": "2026-11-04T07:14:14.277Z",
+      "id": 2
+    },
+    {
+      "title": "html",
+      "priority": "Low",
+      "status": "In Progress",
+      "assignee": "maryam",
+      "projectId": "1",
+      "parentId": "2",
+      "dueDate": "2026-11-19",
+      "createdBy": "bbe7103e-6cd2-4b09-971e-b2f236f16297",
+      "createdByUsername": "user_0356368a",
+      "createdAt": "2026-11-04T07:15:24.562Z",
+      "updatedAt": "2026-11-04T07:15:24.562Z",
+      "completedAt": null,
+      "id": 3
+    }
+  ]
 }

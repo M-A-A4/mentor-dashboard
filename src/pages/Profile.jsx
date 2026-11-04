@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { profileSchema } from "../schemas/profileSchema";
 
 const defaultProfile = {
   name: "Demo User",
@@ -29,6 +30,7 @@ function Profile() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -37,43 +39,53 @@ function Profile() {
 
   function handleSave(event) {
     event.preventDefault();
+    setMessage("");
+
+    const validation = profileSchema.safeParse(form);
+
+    if (!validation.success) {
+      setMessage(validation.error.issues[0].message);
+      return;
+    }
+
+    setIsSaving(true);
 
     const updatedProfile = {
       ...profile,
-      name: form.name.trim(),
-      email: form.email.trim(),
+      name: validation.data.name,
+      email: validation.data.email,
     };
-
-    if (!updatedProfile.name || !updatedProfile.email) {
-      setMessage("Please enter both your name and email address.");
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updatedProfile.email)) {
-      setMessage("Please enter a valid email address.");
-      return;
-    }
 
     try {
       localStorage.setItem(
         "mentor-profile",
         JSON.stringify(updatedProfile)
       );
+
       setProfile(updatedProfile);
+
       window.dispatchEvent(new Event("mentor-profile-updated"));
+
       setForm({
         name: updatedProfile.name,
         email: updatedProfile.email,
       });
+
       setIsEditing(false);
       setMessage("Profile saved successfully.");
     } catch {
       setMessage("Could not save your profile in this browser.");
+    } finally {
+      setIsSaving(false);
     }
   }
 
   function handleCancel() {
-    setForm({ name: profile.name, email: profile.email });
+    setForm({
+      name: profile.name,
+      email: profile.email,
+    });
+
     setIsEditing(false);
     setMessage("");
   }
@@ -100,14 +112,17 @@ function Profile() {
           <p className="profile-role">{profile.role}</p>
 
           {isEditing ? (
-            <form onSubmit={handleSave} className="profile-edit-form">
+            <form
+              onSubmit={handleSave}
+              className="profile-edit-form"
+              noValidate
+            >
               <label htmlFor="profile-name">Full Name</label>
               <input
                 id="profile-name"
                 name="name"
                 value={form.name}
                 onChange={handleChange}
-                required
                 maxLength={80}
               />
 
@@ -118,18 +133,23 @@ function Profile() {
                 type="email"
                 value={form.email}
                 onChange={handleChange}
-                required
                 maxLength={254}
               />
 
               <div className="profile-edit-actions">
-                <button type="submit" className="primary-button">
-                  Save Changes
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </button>
+
                 <button
                   type="button"
                   className="secondary-button"
                   onClick={handleCancel}
+                  disabled={isSaving}
                 >
                   Cancel
                 </button>
@@ -163,7 +183,10 @@ function Profile() {
                 type="button"
                 className="primary-button profile-button"
                 onClick={() => {
-                  setForm({ name: profile.name, email: profile.email });
+                  setForm({
+                    name: profile.name,
+                    email: profile.email,
+                  });
                   setIsEditing(true);
                   setMessage("");
                 }}
@@ -174,7 +197,10 @@ function Profile() {
           )}
 
           {message && (
-            <p role="status" className="profile-message">
+            <p
+              role="status"
+              className="profile-message"
+            >
               {message}
             </p>
           )}

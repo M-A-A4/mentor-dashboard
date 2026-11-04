@@ -10,6 +10,8 @@ function Settings() {
     return localStorage.getItem("mentor-dark-mode") === "true";
   });
 
+  const [message, setMessage] = useState("");
+
   useEffect(() => {
     document.documentElement.setAttribute(
       "data-theme",
@@ -25,6 +27,16 @@ function Settings() {
       String(notifications)
     );
   }, [notifications]);
+
+  function handleNotificationsChange(value) {
+    setNotifications(value);
+    setMessage("Notification preference updated.");
+  }
+
+  function handleDarkModeChange(value) {
+    setDarkMode(value);
+    setMessage("Appearance preference updated.");
+  }
 
   return (
     <div className="page-container">
@@ -49,9 +61,14 @@ function Settings() {
           <div>
             <strong>Email Notifications</strong>
             <p>
-              Save your notification preference for this browser.
-              This does not send emails yet.
+              {notifications
+                ? "Email notifications are enabled in your preferences."
+                : "Email notifications are disabled in your preferences."}
             </p>
+            <small>
+              This setting saves your choice in this browser.
+              Actual emails are not sent yet.
+            </small>
           </div>
 
           <label className="toggle">
@@ -59,7 +76,7 @@ function Settings() {
               type="checkbox"
               checked={notifications}
               onChange={(event) =>
-                setNotifications(event.target.checked)
+                handleNotificationsChange(event.target.checked)
               }
               aria-label="Enable email notifications preference"
             />
@@ -78,13 +95,19 @@ function Settings() {
               type="checkbox"
               checked={darkMode}
               onChange={(event) =>
-                setDarkMode(event.target.checked)
+                handleDarkModeChange(event.target.checked)
               }
               aria-label="Enable dark mode"
             />
             <span className="toggle-slider" />
           </label>
         </div>
+
+        {message && (
+          <p role="status" className="settings-status-message">
+            {message}
+          </p>
+        )}
 
         <div className="settings-status">
           <strong>Current preferences</strong>
@@ -116,6 +139,11 @@ function Settings() {
         <div className="about-information">
           <span>Routing</span>
           <strong>React Router</strong>
+        </div>
+
+        <div className="about-information">
+          <span>Email delivery</span>
+          <strong>Not connected yet</strong>
         </div>
 
         <div className="about-information">

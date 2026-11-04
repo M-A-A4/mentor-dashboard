@@ -1,9 +1,11 @@
 
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { signInSchema } from "../schemas/signInSchema";
 
 function SignIn() {
   const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -12,20 +14,22 @@ function SignIn() {
     event.preventDefault();
     setError("");
 
-    if (!email.trim() || !password.trim()) {
-      setError("Please enter both your email and password.");
+    const validation = signInSchema.safeParse({
+      email,
+      password,
+    });
+
+    if (!validation.success) {
+      setError(validation.error.issues[0].message);
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-
-    // Demo only: this does not verify credentials with a server.
+    // Demo only: credentials are not verified by a server.
     localStorage.setItem(
       "mentor-demo-session",
-      JSON.stringify({ email: email.trim() })
+      JSON.stringify({
+        email: validation.data.email,
+      })
     );
 
     navigate("/dashboard");
@@ -54,7 +58,7 @@ function SignIn() {
             Enter your email and password to continue in demo mode.
           </p>
 
-          <form onSubmit={handleContinue}>
+          <form onSubmit={handleContinue} noValidate>
             <label htmlFor="email">Email address</label>
             <input
               id="email"
@@ -63,7 +67,6 @@ function SignIn() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              required
             />
 
             <label htmlFor="password">Password</label>
@@ -74,7 +77,6 @@ function SignIn() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              required
             />
 
             {error && (
