@@ -1,3 +1,4 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchProjects } from "../services/projectsApi";
@@ -18,20 +19,23 @@ function ProjectDetails() {
   });
 
   if (projectsQuery.isLoading || tasksQuery.isLoading) {
-    return <p>Loading project details...</p>;
+    return <div className="page-container">Loading project details...</div>;
   }
 
   if (projectsQuery.isError || tasksQuery.isError) {
-    return <p>Failed to load project details.</p>;
+    return <div className="page-container">Failed to load project details.</div>;
   }
 
-  const project = projectsQuery.data.find(
-    (item) => String(item.id) === id
+  const projects = projectsQuery.data || [];
+  const tasks = tasksQuery.data || [];
+
+  const project = projects.find(
+    (item) => String(item.id) === String(id)
   );
 
   if (!project) {
     return (
-      <div>
+      <div className="page-container">
         <h2>Project not found</h2>
         <button onClick={() => navigate("/dashboard/projects")}>
           Back to Projects
@@ -40,50 +44,170 @@ function ProjectDetails() {
     );
   }
 
-  const projectTasks = tasksQuery.data.filter(
-    (task) => String(task.projectId) === id
+  const projectTasks = tasks.filter(
+    (task) => String(task.projectId) === String(id)
   );
 
+  const completed = projectTasks.filter(
+    (task) => task.status === "Completed"
+  ).length;
+
+  const inProgress = projectTasks.filter(
+    (task) => task.status === "In Progress"
+  ).length;
+
+  const todo = projectTasks.filter(
+    (task) => task.status === "To Do"
+  ).length;
+
+  const completionRate = projectTasks.length
+    ? Math.round((completed / projectTasks.length) * 100)
+    : 0;
+
+  const members = Array.isArray(project.members)
+    ? project.members.join(", ")
+    : project.members || "No members added";
+
   return (
-    <div className="page-container">
-      <button onClick={() => navigate("/dashboard/projects")}>
+    <div className="page-container project-details-page">
+      <button
+        className="project-details-back"
+        onClick={() => navigate("/dashboard/projects")}
+      >
         ← Back to Projects
       </button>
 
-      <h1>{project.title}</h1>
-      <p>Owner: {project.ownerUsername || project.owner}</p>
-      <p>Members: {project.members || "None"}</p>
-
-      <h2>Project Tasks ({projectTasks.length})</h2>
-
-      {projectTasks.length === 0 ? (
-        <p>No tasks have been created for this project yet.</p>
-      ) : (
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Assignee</th>
-                <th>Due Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projectTasks.map((task) => (
-                <tr key={task.id}>
-                  <td>{task.title}</td>
-                  <td>{task.priority}</td>
-                  <td>{task.status}</td>
-                  <td>{task.assignee || "Unassigned"}</td>
-                  <td>{task.dueDate || "Not set"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="project-details-hero">
+        <div>
+          <span className="project-details-label">PROJECT OVERVIEW</span>
+          <h1>{project.title}</h1>
+          <p>Manage and track all tasks associated with this project.</p>
         </div>
-      )}
+
+        <button
+          className="project-details-manage"
+          onClick={() => navigate("/dashboard/tasks")}
+        >
+          Manage Tasks →
+        </button>
+      </section>
+
+      <section className="project-details-stats">
+        <div className="project-details-stat">
+          <span>Total Tasks</span>
+          <strong>{projectTasks.length}</strong>
+        </div>
+
+        <div className="project-details-stat">
+          <span>Completed</span>
+          <strong>{completed}</strong>
+        </div>
+
+        <div className="project-details-stat">
+          <span>In Progress</span>
+          <strong>{inProgress}</strong>
+        </div>
+
+        <div className="project-details-stat">
+          <span>To Do</span>
+          <strong>{todo}</strong>
+        </div>
+      </section>
+
+      <section className="project-details-card">
+        <div className="project-details-card-heading">
+          <h2>Project Information</h2>
+          <span>{completionRate}% Complete</span>
+        </div>
+
+        <div className="project-progress-track">
+          <div
+            className="project-progress-fill"
+            style={{ width: `${completionRate}%` }}
+          />
+        </div>
+
+        <div className="project-details-info">
+          <div>
+            <span>Project Owner</span>
+            <strong>{project.ownerUsername || project.owner || "Not assigned"}</strong>
+          </div>
+
+          <div>
+            <span>Team Members</span>
+            <strong>{members}</strong>
+          </div>
+
+          <div>
+            <span>Created</span>
+            <strong>
+              {project.createdAt
+                ? new Date(project.createdAt).toLocaleDateString()
+                : "Not available"}
+            </strong>
+          </div>
+
+          <div>
+            <span>Last Updated</span>
+            <strong>
+              {project.updatedAt
+                ? new Date(project.updatedAt).toLocaleDateString()
+                : "Not available"}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="project-details-card">
+        <div className="project-details-card-heading">
+          <h2>Project Tasks</h2>
+          <span>{projectTasks.length} tasks</span>
+        </div>
+
+        {projectTasks.length === 0 ? (
+          <p className="project-details-empty">
+            No tasks have been created for this project yet.
+          </p>
+        ) : (
+          <div className="table-container">
+            <table className="project-task-table">
+              <thead>
+                <tr>
+                  <th>Task Name</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Assignee</th>
+                  <th>Due Date</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {projectTasks.map((task) => (
+                  <tr key={task.id}>
+                    <td>{task.title}</td>
+                    <td>
+                      <span className={`task-priority-badge ${task.priority?.toLowerCase()}`}>
+                        {task.priority}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`task-status-badge ${task.status?.toLowerCase().replaceAll(" ", "-")}`}>
+                        {task.status}
+                      </span>
+                    </td>
+                    <td>{task.assignee || "Unassigned"}</td>
+                    <td>
+                      {task.dueDate
+                        ? new Date(task.dueDate).toLocaleDateString()
+                        : "Not set"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

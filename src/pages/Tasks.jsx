@@ -76,25 +76,43 @@ function Tasks() {
     setFormError("");
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    setFormError("");
+ function handleSubmit(event) {
+  event.preventDefault();
+  setFormError("");
 
-    const validation = taskSchema.safeParse(form);
+  const validation = taskSchema.safeParse(form);
 
-    if (!validation.success) {
-      setFormError(validation.error.issues[0].message);
-      return;
-    }
+  if (!validation.success) {
+    setFormError(validation.error.issues[0].message);
+    return;
+  }
 
-    const selectedProject = projects.find(
-      (project) => String(project.id) === validation.data.projectId
+  const selectedProject = projects.find(
+    (project) => String(project.id) === validation.data.projectId
+  );
+
+  if (!selectedProject) {
+    setFormError("Please select a valid project.");
+    return;
+  }
+
+  // Validate the selected parent task
+  if (validation.data.parentId) {
+    const selectedParent = tasks.find(
+      (task) => String(task.id) === validation.data.parentId
     );
 
-    if (!selectedProject) {
-      setFormError("Please select a valid project.");
+    if (
+      !selectedParent ||
+      String(selectedParent.projectId) !== validation.data.projectId ||
+      String(selectedParent.id) === String(editingTask?.id)
+    ) {
+      setFormError(
+        "Please select a valid parent task from the same project."
+      );
       return;
     }
+  }
 
     const now = new Date().toISOString();
     const isCompleted = validation.data.status === "Completed";
@@ -245,6 +263,7 @@ function Tasks() {
           editingTask={editingTask}
           projects={projects}
           projectsLoading={projectsLoading}
+           tasks={tasks}
           onSubmit={handleSubmit}
           onClose={closeModal}
         />

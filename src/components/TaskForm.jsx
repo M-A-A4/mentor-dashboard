@@ -7,9 +7,26 @@ function TaskForm({
   editingTask,
   projects,
   projectsLoading,
+  tasks,
   onSubmit,
   onClose,
 }) {
+  // Only show tasks belonging to the selected project.
+  // Exclude the task currently being edited.
+  const parentTasks = tasks.filter(
+    (task) =>
+      String(task.projectId) === String(form.projectId) &&
+      String(task.id) !== String(editingTask?.id)
+  );
+
+  function handleProjectChange(event) {
+    setForm({
+      ...form,
+      projectId: event.target.value,
+      parentId: "",
+    });
+  }
+
   return (
     <div
       className="project-modal-backdrop"
@@ -81,12 +98,11 @@ function TaskForm({
             Project
             <select
               value={form.projectId}
-              onChange={(event) =>
-                setForm({ ...form, projectId: event.target.value })
-              }
+              onChange={handleProjectChange}
               disabled={projectsLoading || projects.length === 0}
             >
               <option value="">Select a project</option>
+
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.title}
@@ -107,14 +123,28 @@ function TaskForm({
           </label>
 
           <label>
-            Parent task ID (optional)
-            <input
+            Parent Task (optional)
+            <select
               value={form.parentId}
               onChange={(event) =>
                 setForm({ ...form, parentId: event.target.value })
               }
-              placeholder="For example, 1"
-            />
+              disabled={!form.projectId || parentTasks.length === 0}
+            >
+              <option value="">
+                {form.projectId
+                  ? parentTasks.length > 0
+                    ? "No parent task"
+                    : "No other tasks in this project"
+                  : "Select a project first"}
+              </option>
+
+              {parentTasks.map((task) => (
+                <option key={task.id} value={task.id}>
+                  {task.title}
+                </option>
+              ))}
+            </select>
           </label>
 
           {projects.length === 0 && !projectsLoading && (

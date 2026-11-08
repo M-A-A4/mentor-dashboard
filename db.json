@@ -24,6 +24,20 @@
       "updatedAt": "2026-11-04T06:27:55.119Z",
       "completedAt": "2026-11-25",
       "id": 2
+    },
+    {
+      "title": "Create assignment submission feature",
+      "owner": "bda02295-509d-41ff-856a-64acda5c1f38",
+      "ownerUsername": "user_7a81efaf",
+      "members": [
+        "Mursal",
+        "Muqadas",
+        "Maryam"
+      ],
+      "createdAt": "2026-11-08T07:02:17.415Z",
+      "updatedAt": "2026-11-08T07:02:34.329Z",
+      "completedAt": null,
+      "id": 3
     }
   ],
   "tasks": [
@@ -70,6 +84,36 @@
       "updatedAt": "2026-11-04T07:15:24.562Z",
       "completedAt": null,
       "id": 3
+    },
+    {
+      "title": "java script",
+      "priority": "High",
+      "status": "Completed",
+      "assignee": "",
+      "projectId": "2",
+      "parentId": "2",
+      "dueDate": "2026-11-03",
+      "createdBy": "bda02295-509d-41ff-856a-64acda5c1f38",
+      "createdByUsername": "user_7a81efaf",
+      "createdAt": "2026-11-08T06:41:59.986Z",
+      "updatedAt": "2026-11-08T06:41:59.986Z",
+      "completedAt": "2026-11-08T06:41:59.986Z",
+      "id": 4
+    },
+    {
+      "title": "Design homepage",
+      "priority": "Medium",
+      "status": "To Do",
+      "assignee": "Mohammad",
+      "projectId": "1",
+      "parentId": "1",
+      "dueDate": null,
+      "createdBy": "bda02295-509d-41ff-856a-64acda5c1f38",
+      "createdByUsername": "user_7a81efaf",
+      "createdAt": "2026-11-08T06:57:17.683Z",
+      "updatedAt": "2026-11-08T06:57:17.683Z",
+      "completedAt": null,
+      "id": 5
     }
   ]
 }
