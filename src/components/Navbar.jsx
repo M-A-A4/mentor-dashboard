@@ -1,44 +1,14 @@
 
-import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-
-const defaultProfile = {
-  name: "Demo User",
-  role: "Workspace Member",
-};
-
-function getSavedProfile() {
-  try {
-    const saved = localStorage.getItem("mentor-profile");
-    return saved
-      ? { ...defaultProfile, ...JSON.parse(saved) }
-      : defaultProfile;
-  } catch {
-    return defaultProfile;
-  }
-}
+import { useAuth } from "../context/AuthContext";
 
 function Navbar({ onMenuClick }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(getSavedProfile);
-
-  useEffect(() => {
-    function updateProfile() {
-      setProfile(getSavedProfile());
-    }
-
-    window.addEventListener("mentor-profile-updated", updateProfile);
-    window.addEventListener("storage", updateProfile);
-
-    return () => {
-      window.removeEventListener("mentor-profile-updated", updateProfile);
-      window.removeEventListener("storage", updateProfile);
-    };
-  }, []);
+  const { user, logout } = useAuth();
 
   function handleLogout() {
-    localStorage.removeItem("mentor-demo-session");
+    logout();
     navigate("/signin", { replace: true });
   }
 
@@ -46,10 +16,17 @@ function Navbar({ onMenuClick }) {
     "/dashboard": "Dashboard",
     "/dashboard/profile": "My Profile",
     "/dashboard/settings": "Settings",
+    "/dashboard/projects": "Projects",
+    "/dashboard/tasks": "Tasks",
   };
 
-  const pageTitle = pageTitles[location.pathname] || "Dashboard";
-  const initial = profile.name?.trim().charAt(0).toUpperCase() || "U";
+  const pageTitle =
+    pageTitles[location.pathname] ||
+    (location.pathname.startsWith("/dashboard/project/")
+      ? "Project Details"
+      : "Dashboard");
+
+  const initial = user?.name?.trim().charAt(0).toUpperCase() || "U";
 
   return (
     <header className="dashboard-navbar">
@@ -73,8 +50,8 @@ function Navbar({ onMenuClick }) {
         <Link to="/dashboard/profile" className="navbar-user">
           <div className="avatar">{initial}</div>
           <div className="navbar-user-info">
-            <strong>{profile.name || "Demo User"}</strong>
-            <span>{profile.role || "Workspace Member"}</span>
+            <strong>{user?.name || "User"}</strong>
+            <span>{user?.role || "Workspace Member"}</span>
           </div>
         </Link>
 

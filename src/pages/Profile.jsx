@@ -2,30 +2,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { profileSchema } from "../schemas/profileSchema";
-
-const defaultProfile = {
-  name: "Demo User",
-  email: "user@example.com",
-  role: "Workspace Member",
-  accountType: "Demo Account",
-  memberSince: "October 2026",
-};
+import { useAuth } from "../context/AuthContext";
 
 function Profile() {
-  const [profile, setProfile] = useState(() => {
-    try {
-      const savedProfile = localStorage.getItem("mentor-profile");
-      return savedProfile
-        ? { ...defaultProfile, ...JSON.parse(savedProfile) }
-        : defaultProfile;
-    } catch {
-      return defaultProfile;
-    }
-  });
+  const { user, updateAccount } = useAuth();
 
   const [form, setForm] = useState({
-    name: profile.name,
-    email: profile.email,
+    name: user?.name || "",
+    email: user?.email || "",
   });
 
   const [isEditing, setIsEditing] = useState(false);
@@ -37,7 +21,7 @@ function Profile() {
     setForm((current) => ({ ...current, [name]: value }));
   }
 
-  function handleSave(event) {
+  async function handleSave(event) {
     event.preventDefault();
     setMessage("");
 
@@ -50,31 +34,21 @@ function Profile() {
 
     setIsSaving(true);
 
-    const updatedProfile = {
-      ...profile,
-      name: validation.data.name,
-      email: validation.data.email,
-    };
-
     try {
-      localStorage.setItem(
-        "mentor-profile",
-        JSON.stringify(updatedProfile)
-      );
-
-      setProfile(updatedProfile);
-
-      window.dispatchEvent(new Event("mentor-profile-updated"));
+      await updateAccount({
+        name: validation.data.name,
+        email: validation.data.email,
+      });
 
       setForm({
-        name: updatedProfile.name,
-        email: updatedProfile.email,
+        name: validation.data.name,
+        email: validation.data.email,
       });
 
       setIsEditing(false);
-      setMessage("Profile saved successfully.");
-    } catch {
-      setMessage("Could not save your profile in this browser.");
+      setMessage("Profile updated successfully.");
+    } catch (error) {
+      setMessage(error.message || "Could not update profile.");
     } finally {
       setIsSaving(false);
     }
@@ -82,18 +56,17 @@ function Profile() {
 
   function handleCancel() {
     setForm({
-      name: profile.name,
-      email: profile.email,
+      name: user?.name || "",
+      email: user?.email || "",
     });
-
     setIsEditing(false);
     setMessage("");
   }
 
-  const initial = profile.name.trim().charAt(0).toUpperCase() || "U";
+  const initial = user?.name?.trim().charAt(0).toUpperCase() || "U";
 
   return (
-    <div className="page-container">
+    <div className="page-container profile-page">
       <div className="page-heading">
         <div>
           <span className="eyebrow">ACCOUNT</span>
@@ -107,16 +80,11 @@ function Profile() {
 
         <div className="profile-details">
           <div className="profile-avatar">{initial}</div>
-
-          <h2>{profile.name}</h2>
-          <p className="profile-role">{profile.role}</p>
+          <h2>{user?.name}</h2>
+          <p className="profile-role">{user?.role || "Workspace Member"}</p>
 
           {isEditing ? (
-            <form
-              onSubmit={handleSave}
-              className="profile-edit-form"
-              noValidate
-            >
+            <form onSubmit={handleSave} className="profile-edit-form" noValidate>
               <label htmlFor="profile-name">Full Name</label>
               <input
                 id="profile-name"
@@ -137,14 +105,9 @@ function Profile() {
               />
 
               <div className="profile-edit-actions">
-                <button
-                  type="submit"
-                  className="primary-button"
-                  disabled={isSaving}
-                >
+                <button type="submit" className="primary-button" disabled={isSaving}>
                   {isSaving ? "Saving..." : "Save Changes"}
                 </button>
-
                 <button
                   type="button"
                   className="secondary-button"
@@ -160,22 +123,19 @@ function Profile() {
               <div className="profile-information">
                 <div className="information-item">
                   <span>Full Name</span>
-                  <strong>{profile.name}</strong>
+                  <strong>{user?.name}</strong>
                 </div>
-
                 <div className="information-item">
                   <span>Email Address</span>
-                  <strong>{profile.email}</strong>
+                  <strong>{user?.email}</strong>
                 </div>
-
                 <div className="information-item">
                   <span>Account Type</span>
-                  <strong>{profile.accountType}</strong>
+                  <strong>{user?.accountType || "Registered Account"}</strong>
                 </div>
-
                 <div className="information-item">
                   <span>Member Since</span>
-                  <strong>{profile.memberSince}</strong>
+                  <strong>{user?.memberSince || "—"}</strong>
                 </div>
               </div>
 
@@ -184,8 +144,8 @@ function Profile() {
                 className="primary-button profile-button"
                 onClick={() => {
                   setForm({
-                    name: profile.name,
-                    email: profile.email,
+                    name: user?.name || "",
+                    email: user?.email || "",
                   });
                   setIsEditing(true);
                   setMessage("");
@@ -196,24 +156,9 @@ function Profile() {
             </>
           )}
 
-          {message && (
-            <p
-              role="status"
-              className="profile-message"
-            >
-              {message}
-            </p>
-          )}
+          {message && <p role="status" className="profile-message">{message}</p>}
 
-          <p className="demo-note">
-            This is a demo profile. Changes are saved in this browser
-            only; they are not sent to a server.
-          </p>
-
-          <Link
-            to="/dashboard/settings"
-            className="primary-button profile-button"
-          >
+          <Link to="/dashboard/settings" className="secondary-button profile-settings-link">
             Go to Settings →
           </Link>
         </div>

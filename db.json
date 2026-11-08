@@ -47,13 +47,14 @@
       "status": "In Progress",
       "assignee": "ali",
       "projectId": "1",
-      "parentId": null,
+      "parentId": "5",
       "createdBy": "bda02295-509d-41ff-856a-64acda5c1f38",
       "createdByUsername": "user_7a81efaf",
       "createdAt": "2026-10-29T11:17:32.502Z",
-      "updatedAt": "2026-10-29T11:17:32.502Z",
+      "updatedAt": "2026-11-08T11:13:52.839Z",
       "completedAt": null,
-      "id": 1
+      "id": 1,
+      "dueDate": null
     },
     {
       "title": "css",
@@ -114,6 +115,50 @@
       "updatedAt": "2026-11-08T06:57:17.683Z",
       "completedAt": null,
       "id": 5
+    },
+    {
+      "title": "creating dashboard",
+      "priority": "Medium",
+      "status": "To Do",
+      "assignee": "mursal",
+      "projectId": "1",
+      "parentId": null,
+      "dueDate": "2026-11-03",
+      "createdBy": "bda02295-509d-41ff-856a-64acda5c1f38",
+      "createdByUsername": "user_7a81efaf",
+      "createdAt": "2026-11-08T07:58:55.754Z",
+      "updatedAt": "2026-11-08T07:59:16.640Z",
+      "completedAt": null,
+      "id": 6
+    }
+  ],
+  "users": [
+    {
+      "name": "Muqadas Ahmadzai",
+      "email": "muqadas@example.com",
+      "password": "44",
+      "role": "Workspace Member",
+      "accountType": "Registered Account",
+      "memberSince": "November 2026",
+      "id": 1
+    },
+    {
+      "name": "Muqadas Ahmadzai",
+      "email": "muqadasahmadzai@example.com",
+      "password": "12345",
+      "role": "Workspace Member",
+      "accountType": "Registered Account",
+      "memberSince": "November 2026",
+      "id": 2
+    },
+    {
+      "name": "Muqadas Ahmadzai",
+      "email": "muqadasahmadzai@gmail.com",
+      "password": "12345",
+      "role": "Workspace Member",
+      "accountType": "Registered Account",
+      "memberSince": "November 2026",
+      "id": 3
     }
   ]
 }

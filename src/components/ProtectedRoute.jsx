@@ -1,14 +1,15 @@
 
 import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function ProtectedRoute() {
-  const session = localStorage.getItem("mentor-demo-session");
+  const { isAuthenticated } = useAuth();
 
-  if (!session) {
-    return <Navigate to="/signin" replace />;
-  }
-
-  return <Outlet />;
+  return isAuthenticated ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/signin" replace />
+  );
 }
 
 export default ProtectedRoute;

@@ -17,10 +17,7 @@ function DashboardLayout() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onNavigate={closeSidebar}
-      />
+      <Sidebar isOpen={sidebarOpen} onNavigate={closeSidebar} />
 
       {sidebarOpen && (
         <button
@@ -31,7 +28,9 @@ function DashboardLayout() {
       )}
 
       <div className="dashboard-main">
-        <Navbar onMenuClick={toggleSidebar} />
+        <div className="dashboard-topbar">
+          <Navbar onMenuClick={toggleSidebar} />
+        </div>
 
         <main className="dashboard-content">
           <Outlet />

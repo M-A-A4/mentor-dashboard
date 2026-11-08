@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useDebounce } from "../hooks/useDebounce";
 import {
   getCurrentUserId,
   getCurrentUsername,
@@ -23,6 +24,15 @@ function Tasks() {
   const [editingTask, setEditingTask] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
+
+  const [searchTerm, setSearchTerm] = useState("");
+const [projectFilter, setProjectFilter] = useState("all");
+const [priorityFilter, setPriorityFilter] = useState("all");
+const [statusFilter, setStatusFilter] = useState("all");
+const [assigneeFilter, setAssigneeFilter] = useState("all");
+const [createdByFilter, setCreatedByFilter] = useState("all");
+
+const debouncedSearch = useDebounce(searchTerm, 500);
 
   const {
     tasksQuery,
@@ -143,17 +153,107 @@ function Tasks() {
     });
   }
 
-  function getProjectTitle(projectId) {
-    const project = projects.find(
-      (item) => String(item.id) === String(projectId)
-    );
-
-    return project?.title || `Project ${projectId}`;
-  }
-
   function formatDate(value) {
     return value ? new Date(value).toLocaleDateString() : "—";
   }
+
+
+const filteredTasks = useMemo(() => {
+  const search = debouncedSearch.trim().toLowerCase();
+
+  return tasks.filter((task) => {
+    const project = projects.find(
+      (item) => String(item.id) === String(task.projectId)
+    );
+
+    const searchableFields = [
+      task.id,
+      task.title,
+      task.priority,
+      task.status,
+      task.assignee,
+      task.projectId,
+      project?.title,
+      task.parentId,
+      task.createdBy,
+      task.createdByUsername,
+      task.dueDate,
+      task.createdAt,
+      task.updatedAt,
+      task.completedAt,
+    ];
+
+    const matchesSearch =
+      !search ||
+      searchableFields.some((field) =>
+        String(field ?? "").toLowerCase().includes(search)
+      );
+
+    const matchesProject =
+      projectFilter === "all" ||
+      String(task.projectId) === projectFilter;
+
+    const matchesPriority =
+      priorityFilter === "all" ||
+      task.priority === priorityFilter;
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      task.status === statusFilter;
+
+    const matchesAssignee =
+      assigneeFilter === "all" ||
+      (task.assignee || "") === assigneeFilter;
+
+    const matchesCreatedBy =
+      createdByFilter === "all" ||
+      (task.createdByUsername || task.createdBy || "") === createdByFilter;
+
+    return (
+      matchesSearch &&
+      matchesProject &&
+      matchesPriority &&
+      matchesStatus &&
+      matchesAssignee &&
+      matchesCreatedBy
+    );
+  });
+}, [
+  tasks,
+  projects,
+  debouncedSearch,
+  projectFilter,
+  priorityFilter,
+  statusFilter,
+  assigneeFilter,
+  createdByFilter,
+]);
+
+const assignees = [
+  ...new Set(tasks.map((task) => task.assignee).filter(Boolean)),
+];
+
+const creators = [
+  ...new Set(
+    tasks
+      .map((task) => task.createdByUsername || task.createdBy)
+      .filter(Boolean)
+  ),
+];
+
+const tasksByProject = projects.map((project) => ({
+  ...project,
+  tasks: filteredTasks.filter(
+    (task) => String(task.projectId) === String(project.id)
+  ),
+}));
+
+const unassignedTasks = filteredTasks.filter(
+  (task) =>
+    !projects.some(
+      (project) => String(project.id) === String(task.projectId)
+    )
+);
 
   return (
     <div className="page-container">
@@ -167,6 +267,88 @@ function Tasks() {
           + New Task
         </button>
       </div>
+
+      
+<div className="task-filters">
+  <input
+    type="search"
+    placeholder="Search all task fields..."
+    value={searchTerm}
+    onChange={(event) => setSearchTerm(event.target.value)}
+    aria-label="Search tasks"
+  />
+
+  <select
+    value={projectFilter}
+    onChange={(event) => setProjectFilter(event.target.value)}
+  >
+    <option value="all">All Projects</option>
+    {projects.map((project) => (
+      <option key={project.id} value={String(project.id)}>
+        {project.title}
+      </option>
+    ))}
+  </select>
+
+  <select
+    value={priorityFilter}
+    onChange={(event) => setPriorityFilter(event.target.value)}
+  >
+    <option value="all">All Priorities</option>
+    <option value="Low">Low</option>
+    <option value="Medium">Medium</option>
+    <option value="High">High</option>
+  </select>
+
+  <select
+    value={statusFilter}
+    onChange={(event) => setStatusFilter(event.target.value)}
+  >
+    <option value="all">All Statuses</option>
+    <option value="To Do">To Do</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Completed">Completed</option>
+  </select>
+
+  <select
+    value={assigneeFilter}
+    onChange={(event) => setAssigneeFilter(event.target.value)}
+  >
+    <option value="all">All Assignees</option>
+    {assignees.map((assignee) => (
+      <option key={assignee} value={assignee}>
+        {assignee}
+      </option>
+    ))}
+  </select>
+
+  <select
+    value={createdByFilter}
+    onChange={(event) => setCreatedByFilter(event.target.value)}
+  >
+    <option value="all">All Creators</option>
+    {creators.map((creator) => (
+      <option key={creator} value={creator}>
+        {creator}
+      </option>
+    ))}
+  </select>
+
+  <button
+    type="button"
+    onClick={() => {
+      setSearchTerm("");
+      setProjectFilter("all");
+      setPriorityFilter("all");
+      setStatusFilter("all");
+      setAssigneeFilter("all");
+      setCreatedByFilter("all");
+    }}
+  >
+    Clear Filters
+  </button>
+</div>
+
 
       {isLoading && <p>Loading tasks...</p>}
 
@@ -182,50 +364,52 @@ function Tasks() {
         <p role="alert">{deleteMutation.error.message}</p>
       )}
 
-      {!isLoading && !isError && (
-        <div className="panel projects-table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Assignee</th>
-                <th>Project</th>
-                <th>Parent ID</th>
-                <th>Created By</th>
-                <th>Due Date</th>
-                <th>Created</th>
-                <th>Updated</th>
-                <th>Completed</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+      
+{!isLoading && !isError && !projectsLoading && (
+  <div className="task-project-groups">
+    {tasksByProject.map((project) => (
+      <section className="panel projects-table-wrapper" key={project.id}>
+        <div className="projects-heading">
+          <div>
+            <h2>{project.title}</h2>
+            <p>{project.tasks.length} tasks in this project</p>
+          </div>
+        </div>
 
-            <tbody>
-              {tasks.length === 0 ? (
+        {project.tasks.length === 0 ? (
+          <p>No tasks in this project yet.</p>
+        ) : (
+          <div className="table-container">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan="12">
-                    No tasks yet. Create your first task.
-                  </td>
+                  <th>Title</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Assignee</th>
+                  <th>Parent ID</th>
+                  <th>Created By</th>
+                  <th>Due Date</th>
+                  <th>Created</th>
+                  <th>Updated</th>
+                  <th>Completed</th>
+                  <th>Actions</th>
                 </tr>
-              ) : (
-                tasks.map((task) => (
+              </thead>
+
+              <tbody>
+                {project.tasks.map((task) => (
                   <tr key={task.id}>
                     <td>{task.title}</td>
                     <td>{task.priority}</td>
                     <td>{task.status}</td>
                     <td>{task.assignee || "—"}</td>
-                    <td>{getProjectTitle(task.projectId)}</td>
                     <td>{task.parentId ?? "—"}</td>
-                    <td>
-                      {task.createdByUsername || task.createdBy || "—"}
-                    </td>
+                    <td>{task.createdByUsername || task.createdBy || "—"}</td>
                     <td>{formatDate(task.dueDate)}</td>
                     <td>{formatDate(task.createdAt)}</td>
                     <td>{formatDate(task.updatedAt)}</td>
                     <td>{formatDate(task.completedAt)}</td>
-
                     <td>
                       <button
                         type="button"
@@ -233,7 +417,6 @@ function Tasks() {
                       >
                         Edit
                       </button>{" "}
-
                       <button
                         type="button"
                         disabled={deleteMutation.isPending}
@@ -247,12 +430,33 @@ function Tasks() {
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    ))}
+
+    {unassignedTasks.length > 0 && (
+      <section className="panel projects-table-wrapper">
+        <h2>Unassigned / Unknown Project</h2>
+        <p>{unassignedTasks.length} tasks</p>
+
+        {unassignedTasks.map((task) => (
+          <p key={task.id}>
+            {task.title} — {task.status}
+          </p>
+        ))}
+      </section>
+    )}
+
+    {projects.length === 0 && (
+      <p>Create a project before organizing tasks.</p>
+    )}
+  </div>
+)}
+
 
      {isModalOpen && (
         <TaskForm
