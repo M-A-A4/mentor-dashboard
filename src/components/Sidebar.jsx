@@ -1,15 +1,24 @@
 
 import { NavLink, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function Sidebar({ isOpen, onNavigate }) {
+  const { user, logout } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   function linkClass({ isActive }) {
     return isActive ? "sidebar-link active" : "sidebar-link";
+  }
+
+  function handleLogout() {
+    logout();
+    onNavigate?.();
   }
 
   return (
     <aside className={`sidebar ${isOpen ? "sidebar-open" : ""}`}>
       <Link
-        to="/dashboard"
+        to={isAdmin ? "/admin" : "/dashboard"}
         className="sidebar-brand"
         onClick={onNavigate}
       >
@@ -20,6 +29,18 @@ function Sidebar({ isOpen, onNavigate }) {
       <div className="sidebar-label">WORKSPACE</div>
 
       <nav className="sidebar-nav">
+        {isAdmin && (
+          <NavLink
+            to="/admin"
+            end
+            className={linkClass}
+            onClick={onNavigate}
+          >
+            <span className="sidebar-icon">▦</span>
+            <span>Admin Dashboard</span>
+          </NavLink>
+        )}
+
         <NavLink
           to="/dashboard"
           end
@@ -30,7 +51,6 @@ function Sidebar({ isOpen, onNavigate }) {
           <span>Dashboard</span>
         </NavLink>
 
-        {/* Projects link */}
         <NavLink
           to="/dashboard/projects"
           className={linkClass}
@@ -77,14 +97,14 @@ function Sidebar({ isOpen, onNavigate }) {
           </Link>
         </div>
 
-        <Link
-          to="/signin"
+        <button
+          type="button"
           className="sidebar-signout"
-          onClick={onNavigate}
+          onClick={handleLogout}
         >
           <span className="sidebar-icon">↪</span>
-          <span>Back to Sign In</span>
-        </Link>
+          <span>Sign Out</span>
+        </button>
       </div>
     </aside>
   );

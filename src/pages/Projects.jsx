@@ -2,10 +2,7 @@
 import { useMemo, useState } from "react";
 import { useDebounce } from "../hooks/useDebounce";
 import { useNavigate } from "react-router-dom";
-import {
-  getCurrentUserId,
-  getCurrentUsername,
-} from "../utils/user";
+import { useAuth } from "../context/AuthContext";
 import { useProjects } from "../hooks/useProjects";
 import { projectSchema } from "../schemas/projectSchema";
 import ProjectForm from "../components/ProjectForm";
@@ -18,14 +15,16 @@ const emptyForm = {
 
 function Projects() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  // Modal and form states
+  const isAdmin = user?.role === "admin";
+  const currentUserId = String(user?.id ?? "");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
 
-  // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("All");
   const [memberFilter, setMemberFilter] = useState("All");
@@ -33,7 +32,6 @@ function Projects() {
 
   const debouncedSearch = useDebounce(searchTerm, 500);
 
-  // React Query
   const {
     projectsQuery,
     saveMutation,
@@ -47,24 +45,45 @@ function Projects() {
     error,
   } = projectsQuery;
 
-  // Get all unique owners
+  // Admin sees all projects.
+  // Users see projects they own or are members of.
+  const visibleProjects = useMemo(() => {
+    if (isAdmin) return projects;
+
+    return projects.filter((project) => {
+      const isOwner =
+        String(project.owner) === currentUserId;
+
+      const projectMembers = Array.isArray(project.members)
+        ? project.members
+        : project.members
+          ? [project.members]
+          : [];
+
+      const isMember = projectMembers.some(
+        (member) => String(member) === currentUserId
+      );
+
+      return isOwner || isMember;
+    });
+  }, [projects, isAdmin, currentUserId]);
+
   const owners = useMemo(
     () => [
       ...new Set(
-        projects.map(
+        visibleProjects.map(
           (project) =>
             project.ownerUsername || project.owner || "Unassigned"
         )
       ),
     ],
-    [projects]
+    [visibleProjects]
   );
 
-  // Get all unique team members
   const membersList = useMemo(
     () => [
       ...new Set(
-        projects.flatMap((project) =>
+        visibleProjects.flatMap((project) =>
           Array.isArray(project.members)
             ? project.members
             : project.members
@@ -73,14 +92,13 @@ function Projects() {
         )
       ),
     ],
-    [projects]
+    [visibleProjects]
   );
 
-  // Search and filter projects
   const filteredProjects = useMemo(() => {
     const search = debouncedSearch.trim().toLowerCase();
 
-    return projects.filter((project) => {
+    return visibleProjects.filter((project) => {
       const projectMembers = Array.isArray(project.members)
         ? project.members
         : project.members
@@ -112,7 +130,9 @@ function Projects() {
 
       const matchesMember =
         memberFilter === "All" ||
-        projectMembers.includes(memberFilter);
+        projectMembers.some(
+          (member) => String(member) === memberFilter
+        );
 
       const isCompleted = Boolean(project.completedAt);
 
@@ -129,14 +149,20 @@ function Projects() {
       );
     });
   }, [
-    projects,
+    visibleProjects,
     debouncedSearch,
     ownerFilter,
     memberFilter,
     completionFilter,
   ]);
 
-  // Clear all filters
+  function canManageProject(project) {
+    return (
+      isAdmin ||
+      String(project.owner) === currentUserId
+    );
+  }
+
   function clearFilters() {
     setSearchTerm("");
     setOwnerFilter("All");
@@ -144,7 +170,6 @@ function Projects() {
     setCompletionFilter("All");
   }
 
-  // Open create modal
   function openCreateModal() {
     setEditingProject(null);
     setForm(emptyForm);
@@ -153,14 +178,15 @@ function Projects() {
     setIsModalOpen(true);
   }
 
-  // Open edit modal
   function openEditModal(project) {
+    if (!canManageProject(project)) return;
+
     setEditingProject(project);
 
     setForm({
       title: project.title || "",
       members: Array.isArray(project.members)
-        ? project.members.join(", ")
+        ? project.members.join(",")
         : project.members || "",
       completedAt: project.completedAt || "",
     });
@@ -170,7 +196,6 @@ function Projects() {
     setIsModalOpen(true);
   }
 
-  // Close modal
   function closeModal() {
     setIsModalOpen(false);
     setEditingProject(null);
@@ -178,10 +203,19 @@ function Projects() {
     setFormError("");
   }
 
-  // Create or update project
   function handleSubmit(event) {
     event.preventDefault();
     setFormError("");
+
+    if (!user?.id) {
+      setFormError("Please sign in before creating a project.");
+      return;
+    }
+
+    if (editingProject && !canManageProject(editingProject)) {
+      setFormError("You cannot edit this project.");
+      return;
+    }
 
     const validation = projectSchema.safeParse(form);
 
@@ -192,16 +226,27 @@ function Projects() {
 
     const now = new Date().toISOString();
 
+    const selectedMemberIds = validation.data.members
+      .split(",")
+      .map((member) => member.trim())
+      .filter(Boolean);
+
     const project = {
       ...(editingProject || {}),
       title: validation.data.title,
-      owner: editingProject?.owner || getCurrentUserId(),
-      ownerUsername:
-        editingProject?.ownerUsername || getCurrentUsername(),
-      members: validation.data.members
-        .split(",")
-        .map((member) => member.trim())
-        .filter(Boolean),
+
+      // New projects always belong to the logged-in user.
+      // Editing preserves the original owner.
+      owner: editingProject
+        ? editingProject.owner
+        : user.id,
+
+      ownerUsername: editingProject
+        ? editingProject.ownerUsername
+        : user.name,
+
+      members: selectedMemberIds,
+
       createdAt: editingProject?.createdAt || now,
       updatedAt: now,
       completedAt: validation.data.completedAt || null,
@@ -212,18 +257,35 @@ function Projects() {
     });
   }
 
-  // Open project details
   function openProject(project) {
     navigate(`/dashboard/project/${project.id}`);
   }
 
+  function handleDelete(project) {
+    if (!canManageProject(project)) {
+      window.alert("You cannot delete this project.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete "${project.title}" and all its tasks?`
+    );
+
+    if (confirmed) {
+      deleteMutation.mutate(project.id);
+    }
+  }
+
   return (
     <div className="page-container projects-page">
-      {/* Page heading */}
       <div className="projects-heading">
         <div>
           <h1>Projects</h1>
-          <p>Create and manage your workspace projects.</p>
+          <p>
+            {isAdmin
+              ? "View and manage all workspace projects."
+              : "Create and manage your workspace projects."}
+          </p>
         </div>
 
         <button type="button" onClick={openCreateModal}>
@@ -231,7 +293,6 @@ function Projects() {
         </button>
       </div>
 
-      {/* Search and filters */}
       <div className="search-filter-container projects-filters">
         <input
           type="search"
@@ -247,7 +308,6 @@ function Projects() {
           aria-label="Filter by owner"
         >
           <option value="All">All Owners</option>
-
           {owners.map((owner) => (
             <option key={owner} value={owner}>
               {owner}
@@ -261,7 +321,6 @@ function Projects() {
           aria-label="Filter by team member"
         >
           <option value="All">All Members</option>
-
           {membersList.map((member) => (
             <option key={member} value={member}>
               {member}
@@ -271,9 +330,7 @@ function Projects() {
 
         <select
           value={completionFilter}
-          onChange={(event) =>
-            setCompletionFilter(event.target.value)
-          }
+          onChange={(event) => setCompletionFilter(event.target.value)}
           aria-label="Filter by completion status"
         >
           <option value="All">All Projects</option>
@@ -286,7 +343,6 @@ function Projects() {
         </button>
       </div>
 
-      {/* Loading and errors */}
       {isLoading && <p>Loading projects...</p>}
 
       {isError && (
@@ -303,11 +359,10 @@ function Projects() {
         <p role="alert">{deleteMutation.error.message}</p>
       )}
 
-      {/* Projects table */}
       {!isLoading && !isError && (
         <div className="panel projects-table-wrapper">
           <div className="projects-results-count">
-            Showing {filteredProjects.length} of {projects.length} projects
+            Showing {filteredProjects.length} of {visibleProjects.length} projects
           </div>
 
           <table>
@@ -327,8 +382,8 @@ function Projects() {
               {filteredProjects.length === 0 ? (
                 <tr>
                   <td colSpan="7">
-                    {projects.length === 0
-                      ? "No projects yet. Create your first project."
+                    {visibleProjects.length === 0
+                      ? "No projects available for your account."
                       : "No projects match your search or filters."}
                   </td>
                 </tr>
@@ -338,10 +393,7 @@ function Projects() {
                     key={project.id}
                     onClick={() => openProject(project)}
                     onKeyDown={(event) => {
-                      if (
-                        event.key === "Enter" ||
-                        event.key === " "
-                      ) {
+                      if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
                         openProject(project);
                       }
@@ -352,71 +404,54 @@ function Projects() {
                     style={{ cursor: "pointer" }}
                   >
                     <td>{project.title}</td>
-
                     <td>
-                      {project.ownerUsername ||
-                        project.owner ||
-                        "—"}
+                      {project.ownerUsername || project.owner || "—"}
                     </td>
-
                     <td>
                       {Array.isArray(project.members)
                         ? project.members.join(", ") || "—"
                         : project.members || "—"}
                     </td>
-
                     <td>
                       {project.createdAt
-                        ? new Date(
-                            project.createdAt
-                          ).toLocaleDateString()
+                        ? new Date(project.createdAt).toLocaleDateString()
                         : "—"}
                     </td>
-
                     <td>
                       {project.updatedAt
-                        ? new Date(
-                            project.updatedAt
-                          ).toLocaleDateString()
+                        ? new Date(project.updatedAt).toLocaleDateString()
                         : "—"}
                     </td>
-
                     <td>
                       {project.completedAt
-                        ? new Date(
-                            project.completedAt
-                          ).toLocaleDateString()
+                        ? new Date(project.completedAt).toLocaleDateString()
                         : "—"}
                     </td>
-
                     <td>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openEditModal(project);
-                        }}
-                      >
-                        Edit
-                      </button>{" "}
+                      {canManageProject(project) && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openEditModal(project);
+                            }}
+                          >
+                            Edit
+                          </button>{" "}
 
-                      <button
-                        type="button"
-                        disabled={deleteMutation.isPending}
-                        onClick={(event) => {
-                          event.stopPropagation();
-
-                          if (
-                            window.confirm(
-                              `Delete "${project.title}"?`
-                            )
-                          ) {
-                            deleteMutation.mutate(project.id);
-                          }
-                        }}
-                      >
-                        Delete
-                      </button>
+                          <button
+                            type="button"
+                            disabled={deleteMutation.isPending}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDelete(project);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -426,7 +461,6 @@ function Projects() {
         </div>
       )}
 
-      {/* Create/Edit Project Modal */}
       {isModalOpen && (
         <ProjectForm
           form={form}

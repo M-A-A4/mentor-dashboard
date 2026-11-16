@@ -1,6 +1,8 @@
 
 import Projects from "./pages/Projects";
 import ProjectDetails from "./pages/ProjectDetails";
+import AdminDashboard from "./pages/AdminDashboard";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
@@ -14,11 +16,22 @@ import NotFound from "./pages/NotFound";
 import DashboardLayout from "./components/DashboardLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Tasks from "./pages/Tasks";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
 import "./App.css";
 
 const queryClient = new QueryClient();
+
+// Only administrators can access the admin dashboard.
+function AdminRoute({ children }) {
+  const { user } = useAuth();
+
+  if (user?.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
 
 function App() {
   useEffect(() => {
@@ -39,6 +52,7 @@ function App() {
           <Route path="/signin" element={<SignIn />} />
 
           <Route element={<ProtectedRoute />}>
+            {/* Regular user dashboard */}
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="profile" element={<Profile />} />
@@ -47,9 +61,25 @@ function App() {
               <Route path="tasks" element={<Tasks />} />
               <Route path="project/:id" element={<ProjectDetails />} />
             </Route>
+
+            {/* Separate admin dashboard */}
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <DashboardLayout />
+                </AdminRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+            </Route>
           </Route>
 
-          <Route path="/login" element={<Navigate to="/signin" replace />} />
+          <Route
+            path="/login"
+            element={<Navigate to="/signin" replace />}
+          />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AuthProvider>

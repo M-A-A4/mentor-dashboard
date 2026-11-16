@@ -1,5 +1,6 @@
 
 const API_URL = "http://localhost:3001/projects";
+const TASKS_API_URL = "http://localhost:3001/tasks";
 
 // Get all projects
 export async function fetchProjects() {
@@ -35,8 +36,35 @@ export async function saveProject(project) {
   return response.json();
 }
 
-// Delete a project
+// Delete a project and all its tasks
 export async function deleteProject(id) {
+  // First, get all tasks
+  const tasksResponse = await fetch(TASKS_API_URL);
+
+  if (!tasksResponse.ok) {
+    throw new Error("Failed to load tasks before deleting project");
+  }
+
+  const tasks = await tasksResponse.json();
+
+  // Find all tasks belonging to this project
+  const projectTasks = tasks.filter(
+    (task) => String(task.projectId) === String(id)
+  );
+
+  // Delete each task
+  for (const task of projectTasks) {
+    const response = await fetch(
+      `${TASKS_API_URL}/${task.id}`,
+      { method: "DELETE" }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete task: ${task.title}`);
+    }
+  }
+
+  // Finally, delete the project
   const response = await fetch(`${API_URL}/${id}`, {
     method: "DELETE",
   });
@@ -44,4 +72,6 @@ export async function deleteProject(id) {
   if (!response.ok) {
     throw new Error("Failed to delete project");
   }
+
+  return { success: true };
 }

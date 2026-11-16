@@ -1,4 +1,8 @@
 
+import { useEffect, useState } from "react";
+
+const USERS_URL = "http://localhost:3001/users";
+
 function TaskForm({
   form,
   setForm,
@@ -11,12 +15,45 @@ function TaskForm({
   onSubmit,
   onClose,
 }) {
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState("");
+
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        setUsersLoading(true);
+        setUsersError("");
+
+        const response = await fetch(USERS_URL);
+
+        if (!response.ok) {
+          throw new Error("Could not load registered users.");
+        }
+
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        setUsersError(error.message);
+      } finally {
+        setUsersLoading(false);
+      }
+    }
+
+    loadUsers();
+  }, []);
+
   // Only show tasks belonging to the selected project.
   // Exclude the task currently being edited.
   const parentTasks = tasks.filter(
     (task) =>
       String(task.projectId) === String(form.projectId) &&
       String(task.id) !== String(editingTask?.id)
+  );
+
+  // Keep old assignments visible while editing legacy tasks.
+  const currentAssigneeExists = users.some(
+    (user) => String(user.id) === String(form.assignee)
   );
 
   function handleProjectChange(event) {
@@ -28,10 +65,7 @@ function TaskForm({
   }
 
   return (
-    <div
-      className="project-modal-backdrop"
-      onClick={onClose}
-    >
+    <div className="project-modal-backdrop" onClick={onClose}>
       <section
         className="project-modal"
         role="dialog"
@@ -85,14 +119,36 @@ function TaskForm({
 
           <label>
             Assignee
-            <input
-              value={form.assignee}
+            <select
+              value={form.assignee || ""}
               onChange={(event) =>
                 setForm({ ...form, assignee: event.target.value })
               }
-              placeholder="Name or user ID"
-            />
+              disabled={usersLoading || users.length === 0}
+            >
+              <option value="">
+                {usersLoading
+                  ? "Loading users..."
+                  : users.length > 0
+                    ? "Select a registered user"
+                    : "No registered users found"}
+              </option>
+
+              {form.assignee && !currentAssigneeExists && (
+                <option value={form.assignee}>
+                  Previous assignment (not a registered user)
+                </option>
+              )}
+
+              {users.map((user) => (
+                <option key={user.id} value={String(user.id)}>
+                  {user.name} ({user.email})
+                </option>
+              ))}
+            </select>
           </label>
+
+          {usersError && <p role="alert">{usersError}</p>}
 
           <label>
             Project
@@ -163,7 +219,11 @@ function TaskForm({
             <button
               type="submit"
               disabled={
-                isSaving || projects.length === 0 || projectsLoading
+                isSaving ||
+                projects.length === 0 ||
+                projectsLoading ||
+                usersLoading ||
+                Boolean(usersError)
               }
             >
               {isSaving

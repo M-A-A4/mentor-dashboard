@@ -8,7 +8,13 @@ function getSafeUser(account) {
   if (!account) return null;
 
   const safeUser = { ...account };
+
+  // Never expose passwords to the frontend session.
   delete safeUser.password;
+
+  // Only an explicitly assigned admin account is an admin.
+  // All other accounts are regular users.
+  safeUser.role = account.role === "admin" ? "admin" : "user";
 
   return safeUser;
 }
@@ -16,7 +22,11 @@ function getSafeUser(account) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("mentor-demo-session")) || null;
+      const savedUser = JSON.parse(
+        localStorage.getItem("mentor-demo-session")
+      );
+
+      return getSafeUser(savedUser);
     } catch {
       return null;
     }
@@ -24,7 +34,10 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (user) {
-      localStorage.setItem("mentor-demo-session", JSON.stringify(user));
+      localStorage.setItem(
+        "mentor-demo-session",
+        JSON.stringify(user)
+      );
     } else {
       localStorage.removeItem("mentor-demo-session");
     }
@@ -49,7 +62,10 @@ export function AuthProvider({ children }) {
       name,
       email,
       password,
-      role: "Workspace Member",
+
+      // Public registrations always receive regular user access.
+      role: "user",
+
       accountType: "Registered Account",
       memberSince: new Date().toLocaleDateString("en-US", {
         month: "long",
@@ -59,7 +75,9 @@ export function AuthProvider({ children }) {
 
     const createResponse = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(newUser),
     });
 
@@ -84,7 +102,10 @@ export function AuthProvider({ children }) {
     }
 
     const users = await response.json();
-    const foundUser = users.find((item) => item.password === password);
+
+    const foundUser = users.find(
+      (item) => item.password === password
+    );
 
     if (!foundUser) {
       throw new Error("Invalid email or password.");
@@ -101,10 +122,17 @@ export function AuthProvider({ children }) {
       throw new Error("Please sign in again.");
     }
 
+    // Prevent normal profile updates from changing account roles.
+    const safeUpdates = { ...updates };
+      delete safeUpdates.role;
+      delete safeUpdates.password;
+
     const response = await fetch(`${API_URL}/${user.id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(safeUpdates),
     });
 
     if (!response.ok) {
@@ -127,6 +155,7 @@ export function AuthProvider({ children }) {
       value={{
         user,
         isAuthenticated: Boolean(user),
+        isAdmin: user?.role === "admin",
         register,
         login,
         updateAccount,
